@@ -20,8 +20,10 @@ def preprocess_data():
         'Unspecified': 'United Kingdom',
         'RSA': 'South Africa',
     })
-    df = df[(df['UnitPrice'] > 0) & (df['UnitPrice'] <= 1000)]
-    df = df[(df['Quantity'] > 0) & (df['Quantity'] <= 3000)]
+    df = df[(df['UnitPrice'] > 0) & (df['UnitPrice'] <= 200)]
+    df = df[(df['Quantity'] > 0) & (df['Quantity'] <= 1500)]
+    df = df[(df['TotalPrice'] > 0) & (df['TotalPrice'] <= 7000)]
+    df = df[(df['InvoiceDate'] >= '2010-12-01') & (df['InvoiceDate'] <= '2011-12-09')]
     df = df[df['Country'] == "United Kingdom"]
     rfm_df = rfm(df)
     df = df.merge(rfm_df, on='CustomerID', how='left')
