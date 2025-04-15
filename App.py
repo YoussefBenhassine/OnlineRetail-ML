@@ -234,8 +234,8 @@ def analysis():
         ).reset_index()
             
         st.dataframe(segment_stats.style.format({
-            'avg_spending': '€{:,.2f}',
-            'total_spending': '€{:,.2f}'
+            'avg_spending': '{:,.2f}',
+            'total_spending': '{:,.2f}'
         }))
             
         col1, col2 = st.columns(2)
@@ -282,7 +282,7 @@ def analysis():
             st.markdown(f"Top {top_n} Products by Revenue")
             fig = px.bar(products.head(top_n), x='revenue', y='Description',
                         orientation='h', color='revenue',
-                        labels={'revenue': 'Revenue (€)'})
+                        labels={'revenue': 'Revenue '})
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
@@ -295,7 +295,7 @@ def analysis():
         # Product details table
         st.markdown("Product Performance Details")
         st.dataframe(products.head(top_n).style.format({
-            'revenue': '€{:,.2f}',
+            'revenue': '{:,.2f}',
             'quantity_sold': '{:,}'
         }))
     
@@ -310,7 +310,7 @@ def analysis():
     # Afficher l'évolution mensuelle
         fig = px.line(sales_data['all_months'], x='year_month', y='total_sales',
                  title='Évolution mensuelle des ventes',
-                 labels={'year_month': 'Mois', 'total_sales': 'Ventes totales (€)'})
+                 labels={'year_month': 'Mois', 'total_sales': 'Ventes totales'})
         st.plotly_chart(fig, use_container_width=True)
     
 
