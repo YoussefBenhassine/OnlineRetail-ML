@@ -47,3 +47,23 @@ def product_performance():
     ).sort_values('revenue', ascending=False)
     
     return top_products.reset_index()
+
+def top_sales_month():
+    df = load_data()
+
+    df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+    df['year_month'] = df['InvoiceDate'].dt.to_period('M').astype(str)
+    
+    monthly_sales = df.groupby('year_month').agg(
+        total_sales=('TotalPrice', 'sum'),
+        order_count=('InvoiceNo', 'nunique')
+    ).reset_index()
+
+    top_month = monthly_sales.loc[monthly_sales['total_sales'].idxmax()]
+    
+    return {
+        'top_month': top_month['year_month'],
+        'total_sales': top_month['total_sales'],
+        'order_count': top_month['order_count'],
+        'all_months': monthly_sales.sort_values('year_month')
+    }

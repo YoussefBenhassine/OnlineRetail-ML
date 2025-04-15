@@ -7,7 +7,7 @@ from segmentation import get_rfm_data, normalize_rfm, apply_kmeans, prepare_cah,
 from scipy.cluster.hierarchy import dendrogram
 import numpy as np  
 from association_rules import apply_apriori, plot_association_rules
-from analysis import top_customer, customer_segmentation, product_performance
+from analysis import top_customer, customer_segmentation, product_performance, top_sales_month
 import plotly.express as px
 
 
@@ -215,9 +215,10 @@ def association_analysis():
 def analysis():
     st.title("Advanced Customer Analytics Dashboard")
     
-    tab1, tab2 = st.tabs([
+    tab1, tab2, tab3 = st.tabs([
         "Customer Segmentation",
-        "Product Performance"
+        "Product Performance",
+        "Temporal Patterns"
     ])
     
     with tab1:
@@ -297,6 +298,20 @@ def analysis():
             'revenue': '€{:,.2f}',
             'quantity_sold': '{:,}'
         }))
+    
+    with tab3 : 
+        st.subheader("📈 Meilleur mois de ventes")
+        sales_data = top_sales_month()
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Meilleur mois", sales_data['top_month'])
+        col2.metric("Chiffre d'affaires", f"€{sales_data['total_sales']:,.2f}")
+        col3.metric("Nombre de commandes", sales_data['order_count'])
+    
+    # Afficher l'évolution mensuelle
+        fig = px.line(sales_data['all_months'], x='year_month', y='total_sales',
+                 title='Évolution mensuelle des ventes',
+                 labels={'year_month': 'Mois', 'total_sales': 'Ventes totales (€)'})
+        st.plotly_chart(fig, use_container_width=True)
     
 
 
