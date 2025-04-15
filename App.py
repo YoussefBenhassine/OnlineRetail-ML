@@ -137,11 +137,15 @@ def association_analysis():
     df = load_data()
     
     st.header("1. Paramètres de l'analyse")
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
-        min_support = st.slider("Support minimum", 0.01, 0.1, 0.05, step=0.01)
+        min_support = st.slider("Support minimum", 0.01, 0.1, 0.02, step=0.01, 
+                               help="Fréquence minimale des itemsets dans le dataset")
     with col2:
-        min_confidence = st.slider("Confiance minimum", 0.1, 1.0, 0.5, step=0.1)
+        min_confidence = st.slider("Confiance minimum", 0.1, 1.0, 0.5, step=0.1,
+                                 help="Probabilité minimale que le conséquent soit acheté si l'antécédent l'est")
+    with col3:
+        top_n = st.slider("Nombre de règles à afficher", 5, 50, 10)
     
     if st.button("Générer les règles d'association"):
         with st.spinner('Calcul en cours...'):
@@ -152,21 +156,61 @@ def association_analysis():
             else:
                 st.success(f"{len(rules)} règles trouvées!")
                 
+               
                 
-                # Tableau interactif
-                st.header("3. Tableau détaillé des règles")
-                st.dataframe(rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']]
-                           .sort_values('lift', ascending=False)
-                           .style.background_gradient(cmap='Blues'))
+                
+                # Section 2: Top règles
+                st.header("2. Meilleures règles par métrique")
+                
+                # Création des onglets pour différentes métriques
+                tab1, tab2, tab3 = st.tabs(["Par Lift", "Par Confiance", "Par Support"])
+                
+                with tab1:
+                    st.subheader(f"Top {top_n} règles par Lift")
+                    top_lift = rules.sort_values('lift', ascending=False).head(top_n)
+                    st.dataframe(top_lift[['antecedents', 'consequents', 'support', 'confidence', 'lift']])
+                    
+                    
+                with tab2:
+                    st.subheader(f"Top {top_n} règles par Confiance")
+                    top_conf = rules.sort_values('confidence', ascending=False).head(top_n)
+                    st.dataframe(top_conf[['antecedents', 'consequents', 'support', 'confidence', 'lift']])
+                
+                with tab3:
+                    st.subheader(f"Top {top_n} règles par Support")
+                    top_supp = rules.sort_values('support', ascending=False).head(top_n)
+                    st.dataframe(top_supp[['antecedents', 'consequents', 'support', 'confidence', 'lift']])
+                
+                # Section 3: Produits fréquents
+                st.header("3. Analyse des produits")
                 
                 # Top produits
-                st.header("4. Produits les plus fréquents")
+                st.subheader("Produits les plus fréquents")
                 top_products = df['Description'].value_counts().head(10)
-                fig, ax = plt.subplots()
-                sns.barplot(x=top_products.values, y=top_products.index, ax=ax)
+                fig2, ax2 = plt.subplots(figsize=(10, 6))
+                sns.barplot(x=top_products.values, y=top_products.index, ax=ax2, palette='Blues_d')
                 plt.title('Top 10 des produits les plus fréquents')
-                st.pyplot(fig)
-
+                st.pyplot(fig2)
+                
+                # Matrice de co-occurrence (exemple simplifié)
+                st.subheader("Produits fréquemment achetés ensemble")
+                product_pairs = rules[['antecedents', 'consequents']].apply(lambda x: f"{x[0]} → {x[1]}", axis=1)
+                pair_counts = product_pairs.value_counts().head(10)
+                
+                fig3, ax3 = plt.subplots(figsize=(10, 6))
+                sns.barplot(x=pair_counts.values, y=pair_counts.index, ax=ax3, palette='Greens_d')
+                plt.title('Top 10 des associations de produits')
+                plt.xlabel('Nombre d\'occurrences')
+                st.pyplot(fig3)
+                
+                
+                # Section 4: Tableau complet interactif
+                st.header("4. Tableau complet des règles")
+                st.dataframe(rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']]
+                           .sort_values('lift', ascending=False)
+                           .style.background_gradient(subset=['support', 'confidence', 'lift'], cmap='Blues')
+                           .format({'support': '{:.3f}', 'confidence': '{:.3f}', 'lift': '{:.3f}'}))
+                
 # Ajouter dans la navigation sidebar
 selected_page = st.sidebar.radio(
     "Navigation",
