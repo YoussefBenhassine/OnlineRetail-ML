@@ -1,6 +1,6 @@
 import pandas as pd 
 from data_prep import load_data
-import matplotlib.pyplot as plt
+import numpy as np
 
 def top_customer(top_n) : 
     df = load_data()
@@ -8,10 +8,32 @@ def top_customer(top_n) :
     top_customers = top_customers.sort_values('Frequency', ascending=False).head(top_n)
     return top_customers
 
-def total_spent():
+
+def customer_segmentation():
     df = load_data()
-    depense = df.groupby(['CustomerID']).agg(
+    # Calcul du montant total dépensé par client
+    customer_spending = df.groupby('CustomerID').agg(
         total_spent=('TotalPrice', 'sum'),
-        nb_cmd=('InvoiceNo', 'nunique')
-    ).reset_index().sort_values('total_spent', ascending=False)
-    return depense
+        country=('Country', 'first'),
+        frequency=('Frequency', 'max')
+    ).reset_index()
+    
+    # Application des segments
+    conditions = [
+        (customer_spending['total_spent'] >= 50000),
+        (customer_spending['total_spent'] >= 10000) & (customer_spending['total_spent'] < 50000),
+        (customer_spending['total_spent'] >= 5000) & (customer_spending['total_spent'] < 10000),
+        (customer_spending['total_spent'] >= 1000) & (customer_spending['total_spent'] < 5000),
+        (customer_spending['total_spent'] < 1000)
+    ]
+    
+    choices = ['Diamond', 'Gold', 'Silver', 'Bronze', 'Iron']
+    customer_spending['segment'] = np.select(conditions, choices)
+    
+    # Ordre des segments pour un tri cohérent
+    segment_order = ['Diamond', 'Gold', 'Silver', 'Bronze', 'Iron']
+    customer_spending['segment'] = pd.Categorical(customer_spending['segment'], 
+                                                categories=segment_order, 
+                                                ordered=True)
+    
+    return customer_spending.sort_values('total_spent', ascending=False)
