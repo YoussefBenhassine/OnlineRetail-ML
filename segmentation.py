@@ -1,15 +1,10 @@
 import pandas as pd
-import streamlit as st
-from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
-from scipy.cluster.hierarchy import dendrogram, linkage
+import numpy as np
 import matplotlib.pyplot as plt
-
-import pandas as pd
 from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
-from scipy.cluster.hierarchy import linkage
+from sklearn.cluster import KMeans, AgglomerativeClustering
+from scipy.cluster.hierarchy import dendrogram, linkage
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 
 def get_rfm_data(df):
     """Extract RFM metrics from cleaned data."""
@@ -36,36 +31,86 @@ def apply_kmeans(rfm_normalized, n_clusters=5):
     silhouette = silhouette_score(rfm_normalized[['Recency', 'Frequency', 'Monetary']], labels)
     return labels, silhouette
 
+def apply_cah(rfm_normalized, n_clusters=5):
+    """Apply complete hierarchical clustering."""
+    cah = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward')
+    labels = cah.fit_predict(rfm_normalized[['Recency', 'Frequency', 'Monetary']])
+    silhouette = silhouette_score(rfm_normalized[['Recency', 'Frequency', 'Monetary']], labels)
+    return labels, silhouette
+
 def prepare_cah(rfm_normalized, sample_size=100):
-    """Prepare data for hierarchical clustering."""
+    """Prepare data for hierarchical clustering dendrogram."""
     sampled_data = rfm_normalized.sample(sample_size)
     Z = linkage(sampled_data[['Recency', 'Frequency', 'Monetary']], method='ward')
     return Z, sampled_data['CustomerID'].astype(str).values
 
+def find_optimal_clusters(rfm_normalized, max_clusters=10):
+    """
+    Determine optimal number of clusters using elbow method and silhouette analysis.
+    Returns metrics for K-Means and CAH.
+    """
+    # Prepare data for clustering
+    X = rfm_normalized[['Recency', 'Frequency', 'Monetary']]
+    
+    # Initialize metrics dictionaries
+    metrics = {
+        'cluster_range': list(range(2, max_clusters+1)),
+        'kmeans': {
+            'inertia': [],
+            'silhouette': [],
+            'calinski': [],
+            'davies': []
+        },
+        'cah': {
+            'silhouette': [],
+            'calinski': [],
+            'davies': []
+        }
+    }
+    
+    for n in metrics['cluster_range']:
+        # K-Means
+        kmeans = KMeans(n_clusters=n, random_state=42)
+        kmeans_labels = kmeans.fit_predict(X)
+        metrics['kmeans']['inertia'].append(kmeans.inertia_)
+        metrics['kmeans']['silhouette'].append(silhouette_score(X, kmeans_labels))
+        metrics['kmeans']['calinski'].append(calinski_harabasz_score(X, kmeans_labels))
+        metrics['kmeans']['davies'].append(davies_bouldin_score(X, kmeans_labels))
+        
+        # CAH
+        cah_labels, _ = apply_cah(rfm_normalized, n_clusters=n)
+        metrics['cah']['silhouette'].append(silhouette_score(X, cah_labels))
+        metrics['cah']['calinski'].append(calinski_harabasz_score(X, cah_labels))
+        metrics['cah']['davies'].append(davies_bouldin_score(X, cah_labels))
+    
+    return metrics
 
 
-
-
-
-
-"""def normalize_data():
-    #Normalize numerical columns in the cleaned data using Min-Max scaling.
-    #Returns a normalized DataFrame and saves it to 'OnlineRetail_normalized.csv'.
-    df = load_data()
+def compare_clustering_algorithms(rfm_normalized, n_clusters=5):
+    """Compare K-Means and CAH clustering results."""
+    # Apply both algorithms
+    kmeans_labels, kmeans_silhouette = apply_kmeans(rfm_normalized, n_clusters)
+    cah_labels, cah_silhouette = apply_cah(rfm_normalized, n_clusters)
     
-    # Select numerical columns to normalize
-    numerical_cols = ['Quantity', 'UnitPrice', 'TotalPrice', 'Recency', 'Frequency', 'Monetary']
+    # Calculate comparison metrics
+    X = rfm_normalized[['Recency', 'Frequency', 'Monetary']]
+    comparison = pd.DataFrame({
+        'Algorithm': ['K-Means', 'CAH'],
+        'Silhouette': [kmeans_silhouette, cah_silhouette],
+        'Calinski-Harabasz': [
+            calinski_harabasz_score(X, kmeans_labels),
+            calinski_harabasz_score(X, cah_labels)
+        ],
+        'Davies-Bouldin': [
+            davies_bouldin_score(X, kmeans_labels),
+            davies_bouldin_score(X, cah_labels)
+        ]
+    })
     
-    # Initialize the MinMaxScaler
-    scaler = MinMaxScaler()
+    return {
+        'comparison': comparison,
+        'kmeans_labels': kmeans_labels,
+        'cah_labels': cah_labels
+    }
     
-    # Normalize the numerical columns
-    df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
-    
-    # Save the normalized data
-    df.to_csv('OnlineRetail_normalized.csv', sep=',', index=False)
-    
-    st.subheader("Normalized Data Preview")
-    st.write(df.head())
-    
-    return df"""
+ 
