@@ -7,6 +7,7 @@ from segmentation import get_rfm_data, normalize_rfm, apply_kmeans, prepare_cah,
 from scipy.cluster.hierarchy import dendrogram
 import numpy as np  
 from association_rules import apply_apriori, plot_association_rules
+from analysis import top_customer, total_spent
 
 
 st.set_page_config(layout="wide")
@@ -167,15 +168,29 @@ def association_analysis():
                 plt.title('Top 10 des produits les plus fréquents')
                 st.pyplot(fig)
 
+def analysis():
+    st.title("Dashboarding")
+    top_n = st.slider('Select number of top customers to display', 5, 50, 10)
+    st.subheader(f'Top {top_n} Customers by Purchase Frequency')
+    st.dataframe(top_customer(top_n))
+    st.subheader('Total spent per Customer')
+    st.dataframe(total_spent())
+
+
+
+
 # Ajouter dans la navigation sidebar
 selected_page = st.sidebar.radio(
     "Navigation",
     options=[
         "Préparation et exploration des données",
         "Segmentation client",
-        "Analyse des règles d'association"
+        "Analyse des règles d'association",
+        "Dashboard"
     ]
 )
+
+
 
 
 
@@ -186,3 +201,5 @@ elif selected_page == "Segmentation client":
     segmentation()
 elif selected_page == "Analyse des règles d'association":
     association_analysis()
+elif selected_page == "Dashboard":
+    analysis()
