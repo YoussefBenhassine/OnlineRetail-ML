@@ -7,7 +7,7 @@ from segmentation import get_rfm_data, normalize_rfm, apply_kmeans, prepare_cah,
 from scipy.cluster.hierarchy import dendrogram
 import numpy as np  
 from association_rules import apply_apriori, plot_association_rules
-from analysis import top_customer, customer_segmentation
+from analysis import top_customer, customer_segmentation, product_performance
 import plotly.express as px
 
 
@@ -164,7 +164,7 @@ def association_analysis():
                 # Section 2: Top règles
                 st.header("2. Meilleures règles par métrique")
                 
-                # Création des onglets pour différentes métriques
+
                 tab1, tab2, tab3 = st.tabs(["Par Lift", "Par Confiance", "Par Support"])
                 
                 with tab1:
@@ -188,13 +188,13 @@ def association_analysis():
                 
                 # Top produits
                 st.subheader("Produits les plus fréquents")
-                top_products = df['Description'].value_counts().head(10)
+                top_products = df['Description'].value_counts().head(10) #############################################""
                 fig2, ax2 = plt.subplots(figsize=(10, 6))
                 sns.barplot(x=top_products.values, y=top_products.index, ax=ax2, palette='Blues_d')
                 plt.title('Top 10 des produits les plus fréquents')
                 st.pyplot(fig2)
                 
-                # Matrice de co-occurrence (exemple simplifié)
+                # Matrice de co-occurrence
                 st.subheader("Produits fréquemment achetés ensemble")
                 product_pairs = rules[['antecedents', 'consequents']].apply(lambda x: f"{x[0]} → {x[1]}", axis=1)
                 pair_counts = product_pairs.value_counts().head(10)
@@ -206,7 +206,6 @@ def association_analysis():
                 st.pyplot(fig3)
                 
                 
-                # Section 4: Tableau complet interactif
                 st.header("4. Tableau complet des règles")
                 st.dataframe(rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']]
                            .sort_values('lift', ascending=False)
@@ -214,60 +213,93 @@ def association_analysis():
                            .format({'support': '{:.3f}', 'confidence': '{:.3f}', 'lift': '{:.3f}'}))
 
 def analysis():
-    st.title("Dashboarding")
+    st.title("Advanced Customer Analytics Dashboard")
     
-    # Onglets pour organiser les différentes analys
-    st.subheader('Customer Segmentation by Total Spending')
-    segments = customer_segmentation()
-        
-    # Afficher les statistiques par segment
-    st.markdown("### Segment Statistics")
-    segment_stats = segments.groupby('segment').agg(
-    customer_count=('CustomerID', 'count'),
-    avg_spending=('total_spent', 'mean'),
-    total_spending=('total_spent', 'sum')
-    ).reset_index()
-        
-    st.dataframe(segment_stats.style.format({
-        'avg_spending': '€{:,.2f}',
-        'total_spending': '€{:,.2f}'
-    }))
-        
-    # Visualisation
-    col1, col2 = st.columns(2)
-        
-    with col1:
-        st.markdown("### Segment Distribution")
-        fig = px.pie(segments, names='segment', 
-                title='Customer Segments Distribution')
-        st.plotly_chart(fig, use_container_width=True)
-        
-    with col2:
-        st.markdown("### Spending by Segment")
-        fig = px.box(segments, x='segment', y='total_spent',
-                    title='Total Spending Distribution by Segment',
-                    labels={'total_spent': 'Total Spent (€)'})
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Afficher les clients par segment
-    st.markdown("### Customers by Segment")
-    selected_segment = st.selectbox(
-        "Select segment to view:",
-        ['All'] + sorted(segments['segment'].unique())
-    )
-        
-    if selected_segment == 'All':
-        display_df = segments
-    else:
-        display_df = segments[segments['segment'] == selected_segment]
-        
+    tab1, tab2 = st.tabs([
+        "Customer Segmentation",
+        "Product Performance"
+    ])
+    
+    with tab1:
+        st.subheader('Customer Segmentation by Total Spending')
+        segments = customer_segmentation()
+            
+        # Segment statistics
+        st.markdown("Segment Statistics")
+        segment_stats = segments.groupby('segment').agg(
+            customer_count=('CustomerID', 'count'),
+            avg_spending=('total_spent', 'mean'),
+            total_spending=('total_spent', 'sum')
+        ).reset_index()
+            
+        st.dataframe(segment_stats.style.format({
+            'avg_spending': '€{:,.2f}',
+            'total_spending': '€{:,.2f}'
+        }))
+            
+        col1, col2 = st.columns(2)
+            
+        with col1:
+            st.markdown("### Segment Distribution")
+            fig = px.pie(segments, names='segment', 
+                    title='Customer Segments Distribution')
+            st.plotly_chart(fig, use_container_width=True)
+            
+        with col2:
+            st.markdown("### Spending by Segment")
+            fig = px.box(segments, x='segment', y='total_spent',
+                        title='Total Spending Distribution by Segment',
+                        labels={'total_spent': 'Total Spent (€)'})
+            st.plotly_chart(fig, use_container_width=True)
+            
+        # Customers by segment
+        st.markdown("Customers by Segment")
+        selected_segment = st.selectbox(
+            "Select segment to view:",
+            ['All'] + sorted(segments['segment'].unique()),
+            key='segment_select'
+        )
+            
+        if selected_segment == 'All':
+            display_df = segments
+        else:
+            display_df = segments[segments['segment'] == selected_segment]
+            
         st.dataframe(display_df.sort_values('total_spent', ascending=False))
+    
+    
+    with tab2:
+        st.subheader("Product Performance Analysis")
+        products = product_performance()
+        
+        # Top products selector
+        top_n = st.slider("Number of top products to display", 5, 50, 10, key='product_slider')
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown(f"Top {top_n} Products by Revenue")
+            fig = px.bar(products.head(top_n), x='revenue', y='Description',
+                        orientation='h', color='revenue',
+                        labels={'revenue': 'Revenue (€)'})
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            st.markdown(f"Top {top_n} Products by Quantity Sold")
+            fig = px.bar(products.head(top_n), x='quantity_sold', y='Description',
+                        orientation='h', color='quantity_sold',
+                        labels={'quantity_sold': 'Quantity Sold'})
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Product details table
+        st.markdown("Product Performance Details")
+        st.dataframe(products.head(top_n).style.format({
+            'revenue': '€{:,.2f}',
+            'quantity_sold': '{:,}'
+        }))
+    
 
 
-
-
-
-# Ajouter dans la navigation sidebar
 selected_page = st.sidebar.radio(
     "Navigation",
     options=[
@@ -279,10 +311,6 @@ selected_page = st.sidebar.radio(
 )
 
 
-
-
-
-# Page routing
 if selected_page == "Préparation et exploration des données":
     preparation_exploration()
 elif selected_page == "Segmentation client":

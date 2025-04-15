@@ -37,3 +37,13 @@ def customer_segmentation():
                                                 ordered=True)
     
     return customer_spending.sort_values('total_spent', ascending=False)
+
+def product_performance():
+    df = load_data()
+    top_products = df.groupby('Description').agg(
+        quantity_sold=('Quantity', 'sum'),
+        revenue=('TotalPrice', 'sum'),
+        orders=('InvoiceNo', 'nunique')
+    ).sort_values('revenue', ascending=False)
+    
+    return top_products.reset_index()
